@@ -11,11 +11,11 @@ import {
   ArrowDownRight,
   Receipt,
   Plus,
-  ArrowRight,
+  BarChart3,
 } from 'lucide-react';
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -44,6 +44,14 @@ interface DashboardProps {
   onSelectTransaction: (tx: Transaction) => void;
   onAddTransaction?: () => void;
   onAddAccount?: () => void;
+}
+
+// Clean Y-Axis Formatter (Fixes decimal .004rb bug)
+function formatYAxisLabel(v: number): string {
+  if (v === 0) return '0';
+  if (v >= 1000000) return `${Math.round(v / 1000000)}jt`;
+  if (v >= 1000) return `${Math.round(v / 1000)}rb`;
+  return `${v}`;
 }
 
 export default function Dashboard({
@@ -82,13 +90,12 @@ export default function Dashboard({
       .slice(0, 5);
   }, [txs]);
 
-  // Compute a guaranteed 5-month smooth timeline so the chart NEVER renders isolated dots
+  // Compute a guaranteed 5-month timeline series for dual bar comparison
   const dynamicCashflow = useMemo(() => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const now = new Date();
     const result = [];
 
-    // Create 5 past months series up to current month
     for (let i = 4; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const yearMonth = d.toISOString().slice(0, 7);
@@ -116,7 +123,7 @@ export default function Dashboard({
 
   return (
     <div className="flex-1 overflow-y-auto selection:bg-[#FF6584]/20">
-      {/* ── Top Header (Mobile Native Compact) ── */}
+      {/* ── Top Header ── */}
       <div className="px-3.5 sm:px-6 lg:px-10 pt-3.5 pb-2 flex items-center justify-between max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-2">
           <div className="transform hover:scale-105 transition-transform duration-200">
@@ -157,7 +164,7 @@ export default function Dashboard({
       {/* ── Main Mobile-First Compact Layout ── */}
       <div className="px-3.5 sm:px-6 lg:px-10 pt-1 pb-20 lg:pb-10 max-w-7xl mx-auto w-full space-y-3 sm:space-y-4">
         
-        {/* ROW 1: Hero Salmon Balance Card (7 cols) + 3 Metric Pods (5 cols) */}
+        {/* ROW 1: Hero Balance Card (7 cols) + 3 Metric Pods (5 cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-4 items-stretch">
           {/* Left: Total Balance Hero Card */}
           <div className="lg:col-span-7 flex flex-col">
@@ -284,47 +291,44 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* ROW 2: Arus Kas Chart (7 cols) + Dompet & Rekening (5 cols) */}
+        {/* ROW 2: Modern 3D Rounded Dual Bar Chart + Dompet & Rekening */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-4">
-          {/* Left 7 cols: Arus Kas Chart (Continuous Smooth Spline Curve) */}
+          {/* Left 7 cols: Modern Rounded Dual Bar Chart */}
           <div className="lg:col-span-7 bg-white rounded-[1.3rem] sm:rounded-[1.6rem] p-3.5 sm:p-4 border border-charcoal/5 shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between mb-1.5">
-              <div>
-                <h2 className="text-xs sm:text-sm font-black text-charcoal">Arus Kas Keuangan</h2>
-                <p className="text-[10px] text-charcoal/40 font-medium">Grafik pemasukan & pengeluaran 5 bulan</p>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#368F7B]/15 text-[#368F7B] flex items-center justify-center">
+                  <BarChart3 size={15} />
+                </div>
+                <div>
+                  <h2 className="text-xs sm:text-sm font-black text-charcoal">Arus Kas Keuangan</h2>
+                  <p className="text-[10px] text-charcoal/40 font-medium">Perbandingan Pemasukan & Pengeluaran</p>
+                </div>
               </div>
+
               <div className="flex items-center gap-2 bg-[#F8F3ED] px-2.5 py-1 rounded-full border border-charcoal/5">
                 <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#368F7B]" />
+                  <span className="w-2 h-2 rounded-full bg-[#368F7B]" />
                   <span className="text-[9px] font-black text-[#368F7B]">Pemasukan</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF6584]" />
+                  <span className="w-2 h-2 rounded-full bg-[#FF6584]" />
                   <span className="text-[9px] font-black text-[#FF6584]">Pengeluaran</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-1">
-              <ResponsiveContainer width="100%" height={135}>
-                <AreaChart
+              <ResponsiveContainer width="100%" height={140}>
+                <BarChart
                   data={dynamicCashflow}
-                  margin={{ top: 8, right: 6, left: -24, bottom: 0 }}
+                  margin={{ top: 8, right: 6, left: -22, bottom: 0 }}
+                  barGap={3}
                 >
-                  <defs>
-                    <linearGradient id="deskGreenGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#368F7B" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#368F7B" stopOpacity={0.02} />
-                    </linearGradient>
-                    <linearGradient id="deskPinkGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FF6584" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#FF6584" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1C1B180A" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1C1B180C" vertical={false} />
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 9, fill: '#1C1B1865', fontFamily: 'Plus Jakarta Sans', fontWeight: 700 }}
+                    tick={{ fontSize: 9, fill: '#1C1B1870', fontFamily: 'Plus Jakarta Sans', fontWeight: 800 }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -332,43 +336,38 @@ export default function Dashboard({
                     tick={{ fontSize: 8, fill: '#1C1B1845', fontFamily: 'Plus Jakarta Sans', fontWeight: 700 }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={v => (v >= 1000000 ? `${v / 1000000}jt` : v > 0 ? `${v / 1000}rb` : '0')}
+                    tickFormatter={formatYAxisLabel}
                   />
                   <Tooltip
+                    cursor={{ fill: 'rgba(28, 27, 24, 0.03)' }}
                     contentStyle={{
-                      borderRadius: 14,
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 12,
+                      border: 'none',
                       backgroundColor: '#1C1B18',
                       color: '#fff',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
-                      fontSize: 11,
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                      fontSize: 10,
                       fontFamily: 'Plus Jakarta Sans',
                       padding: '6px 10px',
                     }}
                     itemStyle={{ color: '#fff', fontWeight: 700 }}
                     formatter={(val) => [formatRupiah(Number(val))]}
                   />
-                  <Area
-                    type="monotone"
+                  <Bar
                     dataKey="income"
                     name="Pemasukan"
-                    stroke="#368F7B"
-                    strokeWidth={2.4}
-                    fill="url(#deskGreenGrad)"
-                    dot={{ r: 3, fill: '#368F7B', stroke: '#fff', strokeWidth: 1.5 }}
-                    activeDot={{ r: 5, fill: '#368F7B', stroke: '#fff', strokeWidth: 2 }}
+                    fill="#368F7B"
+                    radius={[5, 5, 2, 2]}
+                    barSize={11}
                   />
-                  <Area
-                    type="monotone"
+                  <Bar
                     dataKey="expense"
                     name="Pengeluaran"
-                    stroke="#FF6584"
-                    strokeWidth={2.4}
-                    fill="url(#deskPinkGrad)"
-                    dot={{ r: 3, fill: '#FF6584', stroke: '#fff', strokeWidth: 1.5 }}
-                    activeDot={{ r: 5, fill: '#FF6584', stroke: '#fff', strokeWidth: 2 }}
+                    fill="#FF6584"
+                    radius={[5, 5, 2, 2]}
+                    barSize={11}
                   />
-                </AreaChart>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
