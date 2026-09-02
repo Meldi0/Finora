@@ -1,0 +1,10 @@
+{
+  "description": "Finora is a playful personal finance management app that helps users track income, expenses, and savings goals, making money management simple and engaging.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

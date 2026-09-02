@@ -1,0 +1,25 @@
+node_modules/
+dist/
+build/
+.cache/
+.env*
+.vite/
+vite.config.*.timestamp-*
+*.tsbuildinfo
+*-debug.log*
+logs/
+*.log
+.claude-replay.*
+.tmp-*
+
+# Android build outputs
+android/app/build/
+android/build/
+android/.gradle/
+android/.idea/
+android/captures/
+android/local.properties
+
+# Platform-managed agentplat state
+/.plugins/
+/.opencode-skills/

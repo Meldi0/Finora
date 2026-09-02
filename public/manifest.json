@@ -1,0 +1,30 @@
+{
+  "name": "Finora - Keuangan Pribadi",
+  "short_name": "Finora",
+  "description": "Aplikasi pencatatan keuangan pribadi premium, mulus, offline, dan tanpa iklan.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF5EF",
+  "theme_color": "#FAF5EF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
