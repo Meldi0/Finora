@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { LayoutDashboard, Wallet, Plus, BarChart3, User } from 'lucide-react';
 import type { Page } from '../types';
 
@@ -7,7 +8,7 @@ interface BottomNavProps {
   onAdd: () => void;
 }
 
-export default function BottomNav({ currentPage, onNavigate, onAdd }: BottomNavProps) {
+function BottomNav({ currentPage, onNavigate, onAdd }: BottomNavProps) {
   const tabs = [
     {
       id: 'dashboard' as Page,
@@ -51,7 +52,6 @@ export default function BottomNav({ currentPage, onNavigate, onAdd }: BottomNavP
     },
   ];
 
-  // Helper to determine active tab index
   const isTabActive = (tabId: string) => {
     if (tabId === 'dashboard' && currentPage === 'dashboard') return true;
     if (tabId === 'accounts' && currentPage === 'accounts') return true;
@@ -71,9 +71,9 @@ export default function BottomNav({ currentPage, onNavigate, onAdd }: BottomNavP
   };
 
   return (
-    <div className="fixed bottom-4 inset-x-0 z-40 px-4 pointer-events-none select-none flex justify-center">
+    <div className="fixed bottom-4 inset-x-0 z-40 px-4 pointer-events-none select-none flex justify-center gpu-layer">
       {/* ── Apple iOS Liquid Floating Pill Dock ── */}
-      <nav className="pointer-events-auto bg-white/95 backdrop-blur-2xl rounded-full p-2 shadow-[0_16px_40px_rgba(0,0,0,0.14)] border border-charcoal/8 flex items-center justify-between gap-1.5 transition-all duration-500 ease-out max-w-full">
+      <nav className="pointer-events-auto bg-white/95 backdrop-blur-2xl rounded-full p-2 shadow-[0_16px_40px_rgba(0,0,0,0.14)] border border-charcoal/8 flex items-center justify-between gap-1.5 transition-all duration-300 ease-out max-w-full">
         {tabs.map((tab) => {
           const active = isTabActive(tab.id);
           const Icon = tab.icon;
@@ -83,7 +83,7 @@ export default function BottomNav({ currentPage, onNavigate, onAdd }: BottomNavP
               key={tab.id}
               type="button"
               onClick={() => handleTabClick(tab.id)}
-              className={`flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer active:scale-95 ${
+              className={`flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer active:scale-95 ${
                 active
                   ? `px-3.5 py-2 rounded-full ${tab.activeBg} ${tab.activeText} border ${tab.activeBorder} shadow-xs scale-102`
                   : 'w-10 h-10 rounded-full text-charcoal/45 hover:text-charcoal hover:bg-charcoal/5'
@@ -93,14 +93,13 @@ export default function BottomNav({ currentPage, onNavigate, onAdd }: BottomNavP
               <Icon
                 size={active ? 18 : 20}
                 strokeWidth={active ? 2.6 : 2}
-                className={`shrink-0 transition-transform duration-500 ${
+                className={`shrink-0 transition-transform duration-300 ${
                   active ? 'scale-105' : ''
                 }`}
               />
 
-              {/* Smooth Animated Label Text when Active */}
               {active && (
-                <span className="text-xs font-black tracking-tight ml-1.5 whitespace-nowrap overflow-hidden transition-all duration-500 opacity-100 max-w-[80px]">
+                <span className="text-xs font-black tracking-tight ml-1.5 whitespace-nowrap overflow-hidden transition-all duration-300 opacity-100 max-w-[80px]">
                   {tab.label}
                 </span>
               )}
@@ -111,3 +110,5 @@ export default function BottomNav({ currentPage, onNavigate, onAdd }: BottomNavP
     </div>
   );
 }
+
+export default memo(BottomNav);

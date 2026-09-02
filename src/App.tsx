@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import AddTransaction from './components/AddTransaction';
@@ -29,13 +29,30 @@ import Profile from './pages/Profile';
 import { formatRupiah } from './data/mockData';
 import type { Page, Transaction, Account, Budget as BudgetType, Goal } from './types';
 
-// Helper safe local storage loader
+// Safe local storage loader
 function loadLocal<T>(key: string, fallback: T): T {
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : fallback;
   } catch {
     return fallback;
+  }
+}
+
+// Asynchronous non-blocking storage writer
+function saveLocalAsync(key: string, data: any) {
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+      } catch {}
+    });
+  } else {
+    setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+      } catch {}
+    }, 0);
   }
 }
 
@@ -56,7 +73,7 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, []);
 
-  // Core Finance State (Initialized purely from user's storage without dummy data)
+  // Core Finance State
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
     loadLocal<Transaction[]>('finora_transactions', [])
   );
@@ -82,41 +99,29 @@ export default function App() {
     loadLocal<NotificationItem[]>('finora_notifications', [])
   );
 
-  // Sync back to local storage
+  // Non-blocking background sync to local storage
   useEffect(() => {
-    try {
-      localStorage.setItem('finora_transactions', JSON.stringify(transactions));
-    } catch {}
+    saveLocalAsync('finora_transactions', transactions);
   }, [transactions]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('finora_accounts', JSON.stringify(accounts));
-    } catch {}
+    saveLocalAsync('finora_accounts', accounts);
   }, [accounts]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('finora_budgets', JSON.stringify(budgets));
-    } catch {}
+    saveLocalAsync('finora_budgets', budgets);
   }, [budgets]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('finora_goals', JSON.stringify(goals));
-    } catch {}
+    saveLocalAsync('finora_goals', goals);
   }, [goals]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('finora_profile', JSON.stringify(profile));
-    } catch {}
+    saveLocalAsync('finora_profile', profile);
   }, [profile]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('finora_notifications', JSON.stringify(notifications));
-    } catch {}
+    saveLocalAsync('finora_notifications', notifications);
   }, [notifications]);
 
   // Modal visibility states
@@ -136,7 +141,7 @@ export default function App() {
   // Single Active Toast Notification System
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const addToast = (type: ToastMessage['type'], title: string, message: string) => {
+  const addToast = useCallback((type: ToastMessage['type'], title: string, message: string) => {
     const newToast: ToastMessage = {
       id: `toast-${Date.now()}-${Math.random()}`,
       type,
@@ -144,17 +149,16 @@ export default function App() {
       message,
     };
     setToasts([newToast]);
-  };
+  }, []);
 
-  const removeToast = (id: string) => {
+  const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
-  };
+  }, []);
 
   // 1. Transaction Handlers
   const handleAddTransaction = (newTx: Transaction) => {
     setTransactions(prev => [newTx, ...prev]);
 
-    // Update Account Balance
     setAccounts(prev => {
       const targetAcc = prev.find(a => a.id === newTx.accountId);
       if (!targetAcc) {
@@ -179,7 +183,6 @@ export default function App() {
       });
     });
 
-    // Update Budget Spent if Expense
     if (newTx.type === 'expense') {
       setBudgets(prev =>
         prev.map(b => {
@@ -204,7 +207,6 @@ export default function App() {
 
     setTransactions(prev => prev.filter(t => t.id !== id));
 
-    // Revert Account Balance
     setAccounts(prev =>
       prev.map(acc => {
         if (acc.id === target.accountId) {
@@ -215,7 +217,6 @@ export default function App() {
       })
     );
 
-    // Revert Budget Spent if Expense
     if (target.type === 'expense') {
       setBudgets(prev =>
         prev.map(b => {
@@ -245,7 +246,6 @@ export default function App() {
       return;
     }
 
-    // Update balances
     setAccounts(prev =>
       prev.map(acc => {
         if (acc.id === fromId) return { ...acc, balance: acc.balance - amount };
@@ -254,7 +254,6 @@ export default function App() {
       })
     );
 
-    // Record transfer transaction
     const today = new Date().toISOString().slice(0, 10);
     const transferTx: Transaction = {
       id: `tx-transfer-${Date.now()}`,
@@ -450,7 +449,7 @@ export default function App() {
         <SplashScreen onFinish={() => setShowSplash(false)} />
       )}
 
-      {/* Toast Notification Container (Single Toast Active) */}
+      {/* Toast Notification Container */}
       <Toast toasts={toasts} onDismiss={removeToast} />
 
       {/* Desktop sidebar */}
@@ -477,7 +476,6 @@ export default function App() {
       </div>
 
       {/* ── Modals ── */}
-      {/* 1. Add Transaction */}
       {showAddTransaction && (
         <AddTransaction
           accounts={accounts}
@@ -487,7 +485,6 @@ export default function App() {
         />
       )}
 
-      {/* 2. Add Account */}
       {showAddAccount && (
         <AddAccountModal
           onClose={() => setShowAddAccount(false)}
@@ -495,7 +492,6 @@ export default function App() {
         />
       )}
 
-      {/* 3. Transfer Funds */}
       {showTransfer && (
         <TransferModal
           accounts={accounts}
@@ -504,7 +500,6 @@ export default function App() {
         />
       )}
 
-      {/* 4. Add/Edit Budget */}
       {showAddBudget && (
         <AddBudgetModal
           existingBudgets={budgets}
@@ -513,7 +508,6 @@ export default function App() {
         />
       )}
 
-      {/* 5. Add Goal */}
       {showAddGoal && (
         <AddGoalModal
           onClose={() => setShowAddGoal(false)}
@@ -521,7 +515,6 @@ export default function App() {
         />
       )}
 
-      {/* 6. Edit Profile */}
       {showEditProfile && (
         <EditProfileModal
           profile={profile}
@@ -530,7 +523,6 @@ export default function App() {
         />
       )}
 
-      {/* 7. Notifications */}
       {showNotifications && (
         <NotificationModal
           notifications={notifications}
@@ -540,7 +532,6 @@ export default function App() {
         />
       )}
 
-      {/* 8. Transaction Detail & Delete */}
       {selectedTransaction && (
         <TransactionDetailModal
           transaction={selectedTransaction}
@@ -549,7 +540,6 @@ export default function App() {
         />
       )}
 
-      {/* 9. Install App to Home Screen Modal */}
       {showInstallApp && (
         <InstallAppModal
           onClose={() => setShowInstallApp(false)}
@@ -558,7 +548,6 @@ export default function App() {
         />
       )}
 
-      {/* 10. Security & Privacy Modal */}
       {showSecurityModal && (
         <SecurityModal
           onClose={() => setShowSecurityModal(false)}
@@ -566,21 +555,18 @@ export default function App() {
         />
       )}
 
-      {/* 11. Theme & Number Format Modal */}
       {showThemeModal && (
         <ThemePreferencesModal
           onClose={() => setShowThemeModal(false)}
         />
       )}
 
-      {/* 12. Help & FAQ Guide Modal */}
       {showHelpModal && (
         <HelpGuideModal
           onClose={() => setShowHelpModal(false)}
         />
       )}
 
-      {/* 13. Export CSV & JSON Backup / Restore Modal */}
       {showExportModal && (
         <ExportModal
           transactions={transactions}
