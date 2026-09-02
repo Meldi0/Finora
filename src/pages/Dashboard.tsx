@@ -9,7 +9,6 @@ import {
   Target,
   ArrowUpRight,
   ArrowDownRight,
-  Receipt,
   Plus,
   BarChart3,
 } from 'lucide-react';
@@ -46,7 +45,7 @@ interface DashboardProps {
   onAddAccount?: () => void;
 }
 
-// Clean Y-Axis Formatter (Fixes decimal .004rb bug)
+// Clean Y-Axis Formatter (Always outputs proper Rupiah scale: 0, 50rb, 100rb, 1jt)
 function formatYAxisLabel(v: number): string {
   if (v === 0) return '0';
   if (v >= 1000000) return `${Math.round(v / 1000000)}jt`;
@@ -114,6 +113,12 @@ export default function Dashboard({
 
     return result;
   }, [txs]);
+
+  // Calculate max scale to prevent 0..4 raw ticks
+  const maxVal = useMemo(() => {
+    const maxData = Math.max(...dynamicCashflow.flatMap(d => [d.income, d.expense]));
+    return Math.max(maxData, 100000);
+  }, [dynamicCashflow]);
 
   const todayStr = new Date().toLocaleDateString('id-ID', {
     weekday: 'short',
@@ -291,7 +296,7 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* ROW 2: Modern 3D Rounded Dual Bar Chart + Dompet & Rekening */}
+        {/* ROW 2: Modern 3D Rounded Dual Bar Chart (with guaranteed minPointSize visual indicators) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-4">
           {/* Left 7 cols: Modern Rounded Dual Bar Chart */}
           <div className="lg:col-span-7 bg-white rounded-[1.3rem] sm:rounded-[1.6rem] p-3.5 sm:p-4 border border-charcoal/5 shadow-xs flex flex-col justify-between">
@@ -322,8 +327,8 @@ export default function Dashboard({
               <ResponsiveContainer width="100%" height={140}>
                 <BarChart
                   data={dynamicCashflow}
-                  margin={{ top: 8, right: 6, left: -22, bottom: 0 }}
-                  barGap={3}
+                  margin={{ top: 8, right: 6, left: -16, bottom: 0 }}
+                  barGap={4}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#1C1B180C" vertical={false} />
                   <XAxis
@@ -333,6 +338,7 @@ export default function Dashboard({
                     tickLine={false}
                   />
                   <YAxis
+                    domain={[0, maxVal]}
                     tick={{ fontSize: 8, fill: '#1C1B1845', fontFamily: 'Plus Jakarta Sans', fontWeight: 700 }}
                     axisLine={false}
                     tickLine={false}
@@ -358,14 +364,16 @@ export default function Dashboard({
                     name="Pemasukan"
                     fill="#368F7B"
                     radius={[5, 5, 2, 2]}
-                    barSize={11}
+                    barSize={12}
+                    minPointSize={6}
                   />
                   <Bar
                     dataKey="expense"
                     name="Pengeluaran"
                     fill="#FF6584"
                     radius={[5, 5, 2, 2]}
-                    barSize={11}
+                    barSize={12}
+                    minPointSize={6}
                   />
                 </BarChart>
               </ResponsiveContainer>
