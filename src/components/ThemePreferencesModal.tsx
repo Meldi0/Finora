@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Moon, Sun, Check, Volume2, Sparkles, Hash } from 'lucide-react';
+import { X, Moon, Check, Volume2, Sparkles, Hash, Type } from 'lucide-react';
 
 interface ThemePreferencesModalProps {
   onClose: () => void;
@@ -15,6 +15,15 @@ export default function ThemePreferencesModal({ onClose }: ThemePreferencesModal
   const [hapticsEnabled, setHapticsEnabled] = useState(() => {
     return localStorage.getItem('finora_haptics') !== 'false';
   });
+
+  // Font Settings
+  const [fontSize, setFontSize] = useState(() => {
+    return localStorage.getItem('finora_font_size') || 'normal';
+  });
+  const [fontFamily, setFontFamily] = useState(() => {
+    return localStorage.getItem('finora_font_family') || 'apple';
+  });
+
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
@@ -29,6 +38,18 @@ export default function ThemePreferencesModal({ onClose }: ThemePreferencesModal
     localStorage.setItem('finora_currency_format', currencyFormat);
     localStorage.setItem('finora_date_format', dateFormat);
     localStorage.setItem('finora_haptics', String(hapticsEnabled));
+    localStorage.setItem('finora_font_size', fontSize);
+    localStorage.setItem('finora_font_family', fontFamily);
+
+    // Apply font size to document root
+    if (fontSize === 'compact') {
+      document.documentElement.style.fontSize = '88%';
+    } else if (fontSize === 'large') {
+      document.documentElement.style.fontSize = '108%';
+    } else {
+      document.documentElement.style.fontSize = '100%';
+    }
+
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -56,8 +77,8 @@ export default function ThemePreferencesModal({ onClose }: ThemePreferencesModal
               <Moon size={16} />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black text-charcoal">Format & Tampilan</h2>
-              <p className="text-[10px] text-charcoal/40 font-semibold">Preferensi visual dan format data</p>
+              <h2 className="text-base sm:text-lg font-black text-charcoal">Format, Font & Tampilan</h2>
+              <p className="text-[10px] text-charcoal/40 font-semibold">Atur ukuran font, gaya teks & format</p>
             </div>
           </div>
           <button
@@ -69,7 +90,87 @@ export default function ThemePreferencesModal({ onClose }: ThemePreferencesModal
         </div>
 
         <div className="space-y-3">
-          {/* Format Nominal Rupiah */}
+          {/* 1. Menu Atur Ukuran Font */}
+          <div className="bg-[#FAF5EF] p-3 rounded-xl border border-charcoal/5 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-black text-charcoal">
+              <Type size={14} className="text-[#FF6584]" />
+              <span>Ukuran Font Teks</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setFontSize('compact')}
+                className={`py-2 px-2 rounded-lg text-center border transition-all cursor-pointer ${
+                  fontSize === 'compact'
+                    ? 'bg-white border-[#FF6584] text-[#FF6584] font-black shadow-xs ring-1 ring-[#FF6584]'
+                    : 'bg-white/60 text-charcoal/60 border-charcoal/5 hover:bg-white'
+                }`}
+              >
+                <p className="text-[10px] font-black">Kecil</p>
+                <p className="text-[8px] text-charcoal/40 font-semibold mt-0.5">Padat & Ringkas</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFontSize('normal')}
+                className={`py-2 px-2 rounded-lg text-center border transition-all cursor-pointer ${
+                  fontSize === 'normal'
+                    ? 'bg-white border-[#FF6584] text-[#FF6584] font-black shadow-xs ring-1 ring-[#FF6584]'
+                    : 'bg-white/60 text-charcoal/60 border-charcoal/5 hover:bg-white'
+                }`}
+              >
+                <p className="text-xs font-black">Normal</p>
+                <p className="text-[8px] text-charcoal/40 font-semibold mt-0.5">Standar Apple</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFontSize('large')}
+                className={`py-2 px-2 rounded-lg text-center border transition-all cursor-pointer ${
+                  fontSize === 'large'
+                    ? 'bg-white border-[#FF6584] text-[#FF6584] font-black shadow-xs ring-1 ring-[#FF6584]'
+                    : 'bg-white/60 text-charcoal/60 border-charcoal/5 hover:bg-white'
+                }`}
+              >
+                <p className="text-sm font-black">Besar</p>
+                <p className="text-[8px] text-charcoal/40 font-semibold mt-0.5">Lebih Jelas</p>
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Menu Gaya Font */}
+          <div className="bg-[#FAF5EF] p-3 rounded-xl border border-charcoal/5 space-y-2">
+            <p className="text-xs font-black text-charcoal">Gaya Tipografi (Font Family)</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFontFamily('apple')}
+                className={`p-2 rounded-lg text-left border transition-all cursor-pointer ${
+                  fontFamily === 'apple'
+                    ? 'bg-white border-[#7D7AFF] shadow-xs ring-1 ring-[#7D7AFF]'
+                    : 'bg-white/60 border-charcoal/5 hover:bg-white'
+                }`}
+              >
+                <p className="text-xs font-black text-charcoal">Apple SF Pro</p>
+                <p className="text-[9px] text-charcoal/45 font-medium mt-0.5">Modern & Elegan</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFontFamily('sans')}
+                className={`p-2 rounded-lg text-left border transition-all cursor-pointer ${
+                  fontFamily === 'sans'
+                    ? 'bg-white border-[#7D7AFF] shadow-xs ring-1 ring-[#7D7AFF]'
+                    : 'bg-white/60 border-charcoal/5 hover:bg-white'
+                }`}
+              >
+                <p className="text-xs font-black text-charcoal">Inter Sans</p>
+                <p className="text-[9px] text-charcoal/45 font-medium mt-0.5">Tajam & Bersih</p>
+              </button>
+            </div>
+          </div>
+
+          {/* 3. Format Nominal Rupiah */}
           <div className="bg-[#FAF5EF] p-3 rounded-xl border border-charcoal/5 space-y-2">
             <div className="flex items-center gap-1.5 text-xs font-black text-charcoal">
               <Hash size={13} className="text-[#7D7AFF]" />
@@ -104,7 +205,7 @@ export default function ThemePreferencesModal({ onClose }: ThemePreferencesModal
             </div>
           </div>
 
-          {/* Format Tanggal */}
+          {/* 4. Format Tanggal */}
           <div className="bg-[#FAF5EF] p-3 rounded-xl border border-charcoal/5 space-y-2">
             <p className="text-xs font-black text-charcoal">Format Tanggal</p>
             <div className="flex gap-2">
@@ -133,7 +234,7 @@ export default function ThemePreferencesModal({ onClose }: ThemePreferencesModal
             </div>
           </div>
 
-          {/* Haptics & Sound Toggle */}
+          {/* 5. Haptics & Sound Toggle */}
           <div className="bg-[#FAF5EF] p-3 rounded-xl border border-charcoal/5 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Volume2 size={15} className="text-charcoal/70" />
@@ -162,7 +263,7 @@ export default function ThemePreferencesModal({ onClose }: ThemePreferencesModal
           <div className="bg-[#F0EFFE] p-3 rounded-xl border border-[#7D7AFF]/15 flex items-start gap-2">
             <Sparkles size={14} className="text-[#7D7AFF] shrink-0 mt-0.5" />
             <p className="text-[10px] text-charcoal/75 leading-relaxed font-semibold">
-              Tema Finora didesain khusus dengan palet warna organik <span className="text-[#7D7AFF] font-black">Apple Warm Canvas</span> yang ramah mata baik di siang maupun malam hari.
+              Ukuran font dan format tampilan tersimpan di memori perangkat kamu.
             </p>
           </div>
         </div>
@@ -170,7 +271,7 @@ export default function ThemePreferencesModal({ onClose }: ThemePreferencesModal
         {savedSuccess && (
           <div className="mt-3 bg-[#EBF7F2] p-2.5 rounded-xl text-[#368F7B] text-xs font-black flex items-center justify-center gap-1">
             <Check size={14} strokeWidth={3} />
-            <span>Preferensi Berhasil Disimpan</span>
+            <span>Preferensi Font & Tampilan Disimpan</span>
           </div>
         )}
 
