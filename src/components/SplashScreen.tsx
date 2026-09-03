@@ -22,7 +22,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [isDrawn, setIsDrawn] = useState(false);
 
-  // ── 60 FPS Living Dynamic Liquid Blob & Aura Engine ──
+  // ── 60 FPS Living Dynamic Liquid Blob Engine ──
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -30,7 +30,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
     if (!ctx) return;
 
     let animationFrameId: number;
-    // Cap dpr at 1.5 for ultra-fast mobile GPU performance
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     let width = (canvas.width = Math.floor(window.innerWidth * dpr));
     let height = (canvas.height = Math.floor(window.innerHeight * dpr));
@@ -42,7 +41,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
     };
     window.addEventListener('resize', handleResize);
 
-    // Rich, vibrant Apple pastel palette
     const blobColors = [
       { hex: '#FF6584' },
       { hex: '#FFA94D' },
@@ -50,11 +48,8 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       { hex: '#7D7AFF' },
       { hex: '#FF758C' },
       { hex: '#F4C56C' },
-      { hex: '#70C1B3' },
-      { hex: '#FF8E71' },
     ];
 
-    // Create 6 optimized liquid blobs that float, wobble & morph
     const blobs: LiquidBlob[] = [
       {
         x: width * 0.25,
@@ -130,7 +125,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       },
     ];
 
-    // 15 Mobile-friendly Stardust Particles
     const particles = Array.from({ length: 15 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,

@@ -1,213 +1,164 @@
 import { useState } from 'react';
-import { Plus, Calendar, Minus, TrendingUp, Target } from 'lucide-react';
+import { Target, Plus, Sparkles } from 'lucide-react';
 import { formatRupiah, formatRupiahFull } from '../data/mockData';
-import IconMapper from '../components/ui/IconMapper';
-import AnimatedNumber from '../components/ui/AnimatedNumber';
-import DepositGoalModal from '../components/DepositGoalModal';
+import WeekHeaderStrip from '../components/ui/WeekHeaderStrip';
+import { useWeekStrip } from '../hooks/useWeekStrip';
 import type { Goal } from '../types';
 
 interface GoalsProps {
   goals: Goal[];
   onAddGoal: () => void;
-  onUpdateGoal: (id: string, amount: number) => void;
-}
-
-function formatDeadline(dateStr: string) {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
-}
-
-function getDaysLeft(dateStr: string) {
-  if (!dateStr) return 0;
-  const diff = new Date(dateStr).getTime() - new Date().getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  onUpdateGoal: (id: string, delta: number) => void;
 }
 
 export default function Goals({ goals, onAddGoal, onUpdateGoal }: GoalsProps) {
+  const { weekDays, isCurrentWeek, selectDay, goBack, goForward } = useWeekStrip();
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
-  const [modalMode, setModalMode] = useState<'deposit' | 'withdraw'>('deposit');
+  const [depositAmount, setDepositAmount] = useState('');
+  const now = new Date();
 
-  const totalSaved = goals.reduce((s, g) => s + g.currentAmount, 0);
   const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0);
+  const totalSaved = goals.reduce((s, g) => s + g.currentAmount, 0);
   const overallPct = totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0;
 
-  const handleOpenDeposit = (goal: Goal) => {
-    setSelectedGoal(goal);
-    setModalMode('deposit');
-  };
-
-  const handleOpenWithdraw = (goal: Goal) => {
-    setSelectedGoal(goal);
-    setModalMode('withdraw');
+  const handleDeposit = () => {
+    if (!selectedGoal || !depositAmount) return;
+    const amt = parseInt(depositAmount.replace(/\D/g, ''), 10);
+    if (amt > 0) {
+      onUpdateGoal(selectedGoal.id, amt);
+      setSelectedGoal(null);
+      setDepositAmount('');
+    }
   };
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Seamless Floating Header */}
-      <div className="sticky top-0 z-30 bg-[#FAF5EF]/80 backdrop-blur-xl px-3.5 sm:px-6 lg:px-10 py-2.5 border-b border-charcoal/5 transition-all">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-base sm:text-lg font-black text-charcoal tracking-tight">Impian Tabungan</h1>
-              <span className="text-[9px] font-black text-[#7D7AFF] bg-[#7D7AFF]/15 px-2 py-0.5 rounded-full border border-[#7D7AFF]/20">
-                {goals.length} Impian
-              </span>
-            </div>
-          </div>
+    <div className="flex-1 overflow-y-auto bg-[#F8F3ED]">
+      <WeekHeaderStrip
+        title="IMPIAN & TABUNGAN"
+        gradientFromTo="from-[#FF85A1] to-[#FF6584]"
+        rightElement={
           <button
             onClick={onAddGoal}
-            className="flex items-center gap-1 bg-[#7D7AFF] hover:bg-[#6865FF] text-white px-3 py-1.5 rounded-full shadow-xs font-black text-[11px] transition-all cursor-pointer active:scale-95"
+            className="w-9 h-9 rounded-full bg-white/25 flex items-center justify-center border-2 border-white/30 cursor-pointer active:scale-90 transition-all shadow-xs"
+            title="Buat Impian Baru"
           >
-            <Plus size={13} strokeWidth={3} />
-            <span>Tambah</span>
+            <Plus size={16} strokeWidth={2.5} />
           </button>
-        </div>
-      </div>
+        }
+        weekDays={weekDays}
+        isCurrentWeek={isCurrentWeek}
+        goBack={goBack}
+        goForward={goForward}
+        selectDay={selectDay}
+      />
 
-      <div className="px-3.5 sm:px-6 lg:px-10 py-3.5 space-y-3.5 pb-20 lg:pb-10 max-w-7xl mx-auto w-full">
-        {/* Overall Stats Hero Card */}
-        <div className="rounded-[1.3rem] sm:rounded-[1.6rem] bg-gradient-to-br from-[#7371FC] to-[#8B89FF] p-3.5 sm:p-5 relative overflow-hidden shadow-md shadow-[#7371FC]/20 text-white">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/15 rounded-full blur-lg pointer-events-none" />
+      <main className="bg-white rounded-t-[2rem] -mt-8 pt-5 px-4 pb-40 space-y-4 shadow-[0_-4px_32px_rgba(0,0,0,0.08)] relative z-20">
 
-          <div className="flex items-center justify-between relative mb-1">
-            <p className="text-white/75 text-[9px] font-extrabold uppercase tracking-wider">
-              Total Tabungan Terkumpul
-            </p>
-            <span className="text-[10px] font-bold text-white bg-black/15 px-2 py-0.5 rounded-full">
-              {overallPct}% tercapai
-            </span>
+        {/* Overview Hero */}
+        <div className="bg-[#FFF0F3] rounded-2xl p-4 border-2 border-[#FF6584]/15 interactive-card animate-slide-up">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={13} className="text-[#FF6584] animate-pulse" />
+              <span className="text-[10px] font-black text-[#1C1B18]/50 uppercase tracking-wider">TOTAL TABUNGAN IMPIAN</span>
+            </div>
+            <span className="text-[10px] font-black text-[#1C1B18] bg-white border-2 border-[#1C1B18]/10 px-3 py-0.5 rounded-full">{goals.length} TARGET</span>
           </div>
-
-          <div className="text-xl sm:text-2xl font-black tracking-tight leading-none my-2 relative">
-            <AnimatedNumber value={totalSaved} formatter={formatRupiahFull} />
+          <div className="flex items-end justify-between mb-3">
+            <h2 className="text-3xl font-black text-[#1C1B18] tracking-tight leading-none">{formatRupiahFull(totalSaved)}</h2>
+            <span className="text-xs font-black text-[#368F7B] mb-1">{overallPct}% tercapai</span>
           </div>
-          <p className="text-white/80 text-[11px] font-bold relative">
-            dari total target impian {formatRupiahFull(totalTarget)}
-          </p>
+          <div className="w-full h-3.5 bg-white rounded-full overflow-hidden border-2 border-[#1C1B18]/8">
+            <div className="h-full bg-gradient-to-r from-[#FF85A1] to-[#FF6584] rounded-full transition-all duration-700 ease-out" style={{ width: `${overallPct}%` }} />
+          </div>
         </div>
 
-        {/* Goals Cards Grid (3 cols on Desktop) */}
-        {goals.length > 0 ? (
-          <div>
-            <h2 className="text-xs sm:text-sm font-black text-charcoal mb-2">Daftar Impian Tabungan</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5">
-              {goals.map(goal => {
-                const pct = goal.targetAmount > 0 ? Math.round((goal.currentAmount / goal.targetAmount) * 100) : 0;
-                const daysLeft = getDaysLeft(goal.deadline);
-                const isFinished = pct >= 100;
+        {/* Goal Cards */}
+        <div className="space-y-3">
+          {goals.map(g => {
+            const pct = Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100));
+            const remaining = Math.max(0, g.targetAmount - g.currentAmount);
+            const deadline = g.deadline ? new Date(g.deadline) : new Date(now.getFullYear() + 1, 0, 1);
+            const diffMonths = Math.max(1, (deadline.getFullYear() - now.getFullYear()) * 12 + (deadline.getMonth() - now.getMonth()));
+            const requiredMonthly = Math.ceil(remaining / diffMonths);
 
-                return (
-                  <div
-                    key={goal.id}
-                    className="rounded-[1.3rem] overflow-hidden relative shadow-xs bg-white border border-charcoal/5 flex flex-col justify-between"
-                  >
-                    {/* Top Section with Goal Color */}
-                    <div
-                      className="p-3.5 text-white relative overflow-hidden"
-                      style={{ backgroundColor: goal.color || '#368F7B' }}
-                    >
-                      <div className="flex items-start justify-between mb-2 relative">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white">
-                            <IconMapper name={goal.icon} size={16} color="#ffffff" />
-                          </div>
-                          <div>
-                            <h3 className="text-xs sm:text-sm font-black leading-tight">{goal.name}</h3>
-                            <span className="text-white/70 text-[9px] font-bold">
-                              {daysLeft > 0 ? `${daysLeft} hari lagi` : 'Selesai'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-base font-black leading-none">
-                            <AnimatedNumber value={pct} suffix="%" />
-                          </div>
-                        </div>
-                      </div>
+            return (
+              <div key={g.id} className="bg-white rounded-2xl border-2 border-[#1C1B18]/8 overflow-hidden interactive-card">
+                <div className="h-2 rounded-t-2xl" style={{ backgroundColor: g.color }} />
 
-                      {/* Progress bar */}
-                      <div className="h-1.5 bg-black/15 rounded-full overflow-hidden mb-1.5 p-0.5 relative">
-                        <div
-                          className="h-full bg-white rounded-full transition-all duration-700 ease-out"
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white border border-black/5 shadow-xs" style={{ backgroundColor: g.color }}>
+                        <Target size={16} />
                       </div>
-                      <div className="flex justify-between text-[10px] font-bold text-white/90">
-                        <span>{formatRupiah(goal.currentAmount)}</span>
-                        <span>{formatRupiah(goal.targetAmount)}</span>
+                      <div>
+                        <h3 className="text-xs font-black text-[#1C1B18]">{g.name}</h3>
+                        <p className="text-[9px] text-[#1C1B18]/40 font-bold">{pct}% tercapai</p>
                       </div>
                     </div>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${pct >= 100 ? 'bg-[#EFFAF6] text-[#368F7B]' : 'bg-[#F2F0FF] text-[#7D7AFF]'}`}>
+                      {pct >= 100 ? 'Selesai ✓' : 'On Track'}
+                    </span>
+                  </div>
 
-                    {/* Bottom Action Section */}
-                    <div className="p-3 bg-white flex-1 flex flex-col justify-between">
-                      <div className="flex items-center justify-between mb-2 text-[10px]">
-                        <span className="text-charcoal/40 font-bold">Target: {formatDeadline(goal.deadline)}</span>
-                        <span className="text-charcoal/60 font-black">
-                          Sisa: {formatRupiah(Math.max(0, goal.targetAmount - goal.currentAmount))}
-                        </span>
-                      </div>
-
-                      <div className="flex gap-1.5">
-                        <button
-                          onClick={() => handleOpenWithdraw(goal)}
-                          disabled={goal.currentAmount <= 0}
-                          className="flex-1 py-1.5 bg-[#FAF5EF] hover:bg-charcoal/10 rounded-lg text-[10px] font-black text-charcoal flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 disabled:opacity-40"
-                        >
-                          <Minus size={11} strokeWidth={2.5} />
-                          <span>Tarik</span>
-                        </button>
-                        <button
-                          onClick={() => handleOpenDeposit(goal)}
-                          disabled={isFinished}
-                          className="flex-[1.4] py-1.5 rounded-lg text-[10px] font-black text-white flex items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
-                          style={{ backgroundColor: goal.color || '#368F7B' }}
-                        >
-                          <Plus size={12} strokeWidth={3} />
-                          <span>Tabung</span>
-                        </button>
-                      </div>
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-black text-[#1C1B18]">{formatRupiah(g.currentAmount)}</span>
+                      <span className="text-xs font-bold text-[#1C1B18]/40">/ {formatRupiah(g.targetAmount)}</span>
+                    </div>
+                    <div className="w-full h-3 bg-[#F8F3ED] rounded-full overflow-hidden border border-[#1C1B18]/8">
+                      <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${pct}%`, backgroundColor: g.color }} />
                     </div>
                   </div>
-                );
-              })}
 
-              {/* Add Goal Button Card */}
-              <button
-                onClick={onAddGoal}
-                className="w-full border-2 border-dashed border-charcoal/15 bg-white/70 rounded-[1.3rem] p-4 flex flex-col items-center justify-center gap-1.5 hover:border-[#7D7AFF] hover:bg-[#7D7AFF]/5 transition-all cursor-pointer min-h-[110px]"
-              >
-                <div className="w-7 h-7 bg-[#F8F3ED] rounded-full flex items-center justify-center">
-                  <Plus size={14} className="text-charcoal/40" />
+                  <div className="flex items-center justify-between pt-2.5 border-t border-[#1C1B18]/8">
+                    <div>
+                      <p className="text-[9px] text-[#1C1B18]/40 font-bold">Tabungan Wajib/Bulan</p>
+                      <p className="text-xs font-black" style={{ color: g.color }}>{formatRupiah(requiredMonthly)}</p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedGoal(g)}
+                      className="px-4 py-2 rounded-xl text-white text-xs font-black cursor-pointer active:scale-95 transition-all shadow-xs hover:opacity-90"
+                      style={{ backgroundColor: g.color }}
+                    >
+                      + Tabung
+                    </button>
+                  </div>
                 </div>
-                <span className="text-[11px] font-black text-charcoal/60">Tambah Impian Baru</span>
+              </div>
+            );
+          })}
+          {goals.length === 0 && (
+            <div className="py-12 text-center">
+              <p className="text-xs font-black text-[#1C1B18]/30">Belum ada target. Tap (+) untuk membuat impian!</p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Deposit Modal */}
+      {selectedGoal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-[#1C1B18]/50 backdrop-blur-xs animate-fade-in" onClick={() => setSelectedGoal(null)}>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm border-2 border-[#1C1B18]/10 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-[#1C1B18]/10 rounded-full mx-auto mb-4" />
+            <h3 className="text-sm font-black text-[#1C1B18] mb-1">Tabung ke {selectedGoal.name}</h3>
+            <p className="text-[10px] text-[#1C1B18]/40 font-bold mb-4">Sisa: {formatRupiah(Math.max(0, selectedGoal.targetAmount - selectedGoal.currentAmount))}</p>
+            <input
+              type="number"
+              value={depositAmount}
+              onChange={e => setDepositAmount(e.target.value)}
+              placeholder="Masukkan nominal (Rp)"
+              autoFocus
+              className="w-full px-4 py-3 text-sm font-black border-2 border-[#1C1B18]/10 rounded-xl focus:outline-none focus:border-[#FF6584] mb-3 bg-[#F8F3ED]"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setSelectedGoal(null)} className="flex-1 py-2.5 text-xs font-black text-[#1C1B18]/50 border-2 border-[#1C1B18]/10 rounded-xl cursor-pointer hover:bg-[#F8F3ED]">Batal</button>
+              <button onClick={handleDeposit} className="flex-1 py-2.5 text-xs font-black text-white rounded-xl cursor-pointer active:scale-95 transition-all shadow-xs" style={{ backgroundColor: selectedGoal.color }}>
+                Simpan Setoran
               </button>
             </div>
           </div>
-        ) : (
-          <div className="bg-white rounded-[1.3rem] p-8 text-center border border-charcoal/5 shadow-xs">
-            <Target size={24} className="text-charcoal/30 mx-auto mb-1.5" />
-            <h3 className="text-xs font-black text-charcoal">Belum Ada Tujuan Tabungan</h3>
-            <p className="text-[10px] text-charcoal/40 mt-0.5 mb-3">
-              Mulai rencanakan impian finansialmu seperti gadget, liburan, atau dana darurat.
-            </p>
-            <button
-              onClick={onAddGoal}
-              className="px-4 py-2 bg-[#7D7AFF] text-white rounded-full font-black text-[11px] shadow-xs active:scale-95 cursor-pointer"
-            >
-              + Buat Impian Pertama
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Manual Deposit/Withdraw Modal */}
-      {selectedGoal && (
-        <DepositGoalModal
-          goal={selectedGoal}
-          mode={modalMode}
-          onClose={() => setSelectedGoal(null)}
-          onConfirm={(goalId, amount) => onUpdateGoal(goalId, amount)}
-        />
+        </div>
       )}
     </div>
   );

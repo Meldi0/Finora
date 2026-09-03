@@ -1,108 +1,73 @@
 import { memo } from 'react';
-import { LayoutDashboard, Wallet, Plus, BarChart3, User } from 'lucide-react';
+import { Home, Receipt, Plus, BarChart3, Menu } from 'lucide-react';
 import type { Page } from '../types';
 
 interface BottomNavProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
   onAdd: () => void;
+  onOpenMore: () => void;
 }
 
-function BottomNav({ currentPage, onNavigate, onAdd }: BottomNavProps) {
+function BottomNav({ currentPage, onNavigate, onAdd, onOpenMore }: BottomNavProps) {
   const tabs = [
-    {
-      id: 'dashboard' as Page,
-      label: 'Beranda',
-      icon: LayoutDashboard,
-      activeBg: 'bg-[#FF6584]/15',
-      activeText: 'text-[#FF6584]',
-      activeBorder: 'border-[#FF6584]/20',
-    },
-    {
-      id: 'accounts' as Page,
-      label: 'Dompet',
-      icon: Wallet,
-      activeBg: 'bg-[#7D7AFF]/15',
-      activeText: 'text-[#7D7AFF]',
-      activeBorder: 'border-[#7D7AFF]/20',
-    },
-    {
-      id: 'add' as const,
-      label: 'Catat',
-      icon: Plus,
-      activeBg: 'bg-[#368F7B]/15',
-      activeText: 'text-[#368F7B]',
-      activeBorder: 'border-[#368F7B]/20',
-    },
-    {
-      id: 'analytics' as Page,
-      label: 'Analitik',
-      icon: BarChart3,
-      activeBg: 'bg-[#FFA94D]/15',
-      activeText: 'text-[#FFA94D]',
-      activeBorder: 'border-[#FFA94D]/20',
-    },
-    {
-      id: 'profile' as Page,
-      label: 'Profil',
-      icon: User,
-      activeBg: 'bg-[#FF758C]/15',
-      activeText: 'text-[#FF758C]',
-      activeBorder: 'border-[#FF758C]/20',
-    },
+    { id: 'dashboard' as Page, label: 'Beranda', icon: Home },
+    { id: 'transactions' as Page, label: 'Aktivitas', icon: Receipt },
+    { id: 'add' as const, label: 'Catat', icon: Plus },
+    { id: 'analytics' as Page, label: 'Analitik', icon: BarChart3 },
+    { id: 'more' as const, label: 'Lainnya', icon: Menu },
   ];
 
-  const isTabActive = (tabId: string) => {
-    if (tabId === 'dashboard' && currentPage === 'dashboard') return true;
-    if (tabId === 'accounts' && currentPage === 'accounts') return true;
-    if (tabId === 'analytics' && (currentPage === 'analytics' || currentPage === 'transactions' || currentPage === 'budget' || currentPage === 'goals')) return true;
-    if (tabId === 'profile' && currentPage === 'profile') return true;
+  const isTabActive = (id: string) => {
+    if (id === 'dashboard' && currentPage === 'dashboard') return true;
+    if (id === 'transactions' && currentPage === 'transactions') return true;
+    if (id === 'analytics' && currentPage === 'analytics') return true;
+    if (id === 'more' && ['accounts', 'budget', 'goals', 'recurring', 'calendar', 'profile'].includes(currentPage)) return true;
     return false;
   };
 
-  const handleTabClick = (tabId: string) => {
-    if (tabId === 'add') {
-      onAdd();
-    } else if (tabId === 'analytics') {
-      onNavigate('analytics');
-    } else {
-      onNavigate(tabId as Page);
-    }
+  const handleClick = (id: string) => {
+    if (id === 'add') onAdd();
+    else if (id === 'more') onOpenMore();
+    else onNavigate(id as Page);
   };
 
   return (
-    <div className="fixed bottom-4 inset-x-0 z-40 px-4 pointer-events-none select-none flex justify-center gpu-layer">
-      {/* ── Apple iOS Liquid Floating Pill Dock ── */}
-      <nav className="pointer-events-auto bg-white/95 backdrop-blur-2xl rounded-full p-2 shadow-[0_16px_40px_rgba(0,0,0,0.14)] border border-charcoal/8 flex items-center justify-between gap-1.5 transition-all duration-300 ease-out max-w-full">
-        {tabs.map((tab) => {
+    <div className="fixed bottom-4 inset-x-0 z-40 px-4 pointer-events-none select-none flex justify-center lg:hidden">
+      {/* Warm Amber Pill Dock */}
+      <nav className="pointer-events-auto bg-[#F4C56C] rounded-full py-2 px-3 shadow-[0_12px_40px_rgba(244,197,108,0.55)] border-2 border-[#1C1B18]/15 flex items-center justify-between gap-1 transition-all duration-300">
+        {tabs.map(tab => {
           const active = isTabActive(tab.id);
           const Icon = tab.icon;
+          const isAddButton = tab.id === 'add';
+
+          if (isAddButton) {
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleClick(tab.id)}
+                className="w-12 h-12 bg-[#1C1B18] text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border-2 border-[#F4C56C] mx-1"
+                aria-label="Catat Transaksi"
+              >
+                <Plus size={22} strokeWidth={3} />
+              </button>
+            );
+          }
 
           return (
             <button
               key={tab.id}
               type="button"
-              onClick={() => handleTabClick(tab.id)}
-              className={`flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer active:scale-95 ${
+              onClick={() => handleClick(tab.id)}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-90 ${
                 active
-                  ? `px-3.5 py-2 rounded-full ${tab.activeBg} ${tab.activeText} border ${tab.activeBorder} shadow-xs scale-102`
-                  : 'w-10 h-10 rounded-full text-charcoal/45 hover:text-charcoal hover:bg-charcoal/5'
+                  ? 'bg-[#1C1B18] text-white shadow-md scale-105'
+                  : 'text-[#1C1B18]/65 hover:text-[#1C1B18] hover:bg-[#1C1B18]/10'
               }`}
               aria-label={tab.label}
             >
-              <Icon
-                size={active ? 18 : 20}
-                strokeWidth={active ? 2.6 : 2}
-                className={`shrink-0 transition-transform duration-300 ${
-                  active ? 'scale-105' : ''
-                }`}
-              />
-
-              {active && (
-                <span className="text-xs font-black tracking-tight ml-1.5 whitespace-nowrap overflow-hidden transition-all duration-300 opacity-100 max-w-[80px]">
-                  {tab.label}
-                </span>
-              )}
+              <Icon size={20} strokeWidth={active ? 2.8 : 2} />
             </button>
           );
         })}

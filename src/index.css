@@ -37,7 +37,7 @@ body {
   position: relative;
 }
 
-/* ── Fixed Mobile Background Layer (Works 100% on iOS Safari & Android WebViews) ── */
+/* ── Full Opacity Warm Organic Background Layer ── */
 body::before {
   content: '';
   position: fixed;
@@ -74,10 +74,11 @@ input[type='number']::-webkit-outer-spin-button {
   backface-visibility: hidden;
 }
 
-/* ── Smooth UI & Animation System ── */
+/* ── Smooth Rich Animation System ── */
 :root {
   --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6);
 }
 
 @keyframes fadeIn {
@@ -92,7 +93,7 @@ input[type='number']::-webkit-outer-spin-button {
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
@@ -103,7 +104,7 @@ input[type='number']::-webkit-outer-spin-button {
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.96);
+    transform: scale(0.92);
   }
   to {
     opacity: 1;
@@ -111,34 +112,62 @@ input[type='number']::-webkit-outer-spin-button {
   }
 }
 
+@keyframes springPop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes floatSoft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 .animate-fade-in {
-  animation: fadeIn 180ms var(--ease-smooth) forwards;
+  animation: fadeIn 220ms var(--ease-smooth) forwards;
 }
 
 .animate-slide-up {
-  animation: slideUp 220ms var(--ease-smooth) forwards;
+  animation: slideUp 280ms var(--ease-spring) forwards;
 }
 
 .animate-scale-in {
-  animation: scaleIn 200ms var(--ease-smooth) forwards;
+  animation: scaleIn 250ms var(--ease-spring) forwards;
 }
 
-/* ── Interactive Utility Classes ── */
-.pressable {
-  transition: transform 120ms var(--ease-spring), opacity 120ms ease;
-  will-change: transform;
+.animate-spring-pop {
+  animation: springPop 320ms var(--ease-spring) forwards;
 }
 
-.pressable:active {
-  transform: scale(0.96);
+.animate-float {
+  animation: floatSoft 3s ease-in-out infinite;
 }
 
-/* Glass & Glow */
-.apple-glass {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+/* Card interactive spring feedback */
+.interactive-card {
+  transition: transform 180ms var(--ease-spring), box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.interactive-card:active {
+  transform: scale(0.97);
+}
+
+.interactive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 /* Accessibility: Reduced Motion Support */

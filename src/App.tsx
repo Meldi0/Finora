@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
+import MobileMoreDrawer from './components/MobileMoreDrawer';
+import OnboardingModal from './components/OnboardingModal';
 import AddTransaction from './components/AddTransaction';
 import AddAccountModal from './components/AddAccountModal';
 import TransferModal from './components/TransferModal';
@@ -25,40 +27,27 @@ import Budget from './pages/Budget';
 import Goals from './pages/Goals';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import Recurring from './pages/Recurring';
+import MoneyCalendar from './pages/MoneyCalendar';
 
-import { formatRupiah } from './data/mockData';
-import type { Page, Transaction, Account, Budget as BudgetType, Goal } from './types';
-
-// Safe local storage loader
-function loadLocal<T>(key: string, fallback: T): T {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-// Asynchronous non-blocking storage writer
-function saveLocalAsync(key: string, data: any) {
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(() => {
-      try {
-        localStorage.setItem(key, JSON.stringify(data));
-      } catch {}
-    });
-  } else {
-    setTimeout(() => {
-      try {
-        localStorage.setItem(key, JSON.stringify(data));
-      } catch {}
-    }, 0);
-  }
-}
+import {
+  accounts as initialAccounts,
+  transactions as initialTxs,
+  budgets as initialBudgets,
+  goals as initialGoals,
+  recurringTransactions as initialRecurring,
+  subscriptionItems as initialSubs,
+  assetsLiabilities as initialAssetsLiabilities,
+  formatRupiah,
+} from './data/mockData';
+import { loadStoredData, saveStoredData } from './utils/storageService';
+import type { Page, Transaction, Account, Budget as BudgetType, Goal, RecurringTransaction, SubscriptionItem, AssetLiability } from './types';
 
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showMobileMore, setShowMobileMore] = useState(false);
 
   // PWA Install Prompt state
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -75,54 +64,58 @@ export default function App() {
 
   // Core Finance State
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
-    loadLocal<Transaction[]>('finora_transactions', [])
+    loadStoredData<Transaction[]>('finora_transactions', initialTxs)
   );
   const [accounts, setAccounts] = useState<Account[]>(() =>
-    loadLocal<Account[]>('finora_accounts', [])
+    loadStoredData<Account[]>('finora_accounts', initialAccounts)
   );
   const [budgets, setBudgets] = useState<BudgetType[]>(() =>
-    loadLocal<BudgetType[]>('finora_budgets', [])
+    loadStoredData<BudgetType[]>('finora_budgets', initialBudgets)
   );
   const [goals, setGoals] = useState<Goal[]>(() =>
-    loadLocal<Goal[]>('finora_goals', [])
+    loadStoredData<Goal[]>('finora_goals', initialGoals)
   );
+  const [recurring, setRecurring] = useState<RecurringTransaction[]>(() =>
+    loadStoredData<RecurringTransaction[]>('finora_recurring', initialRecurring)
+  );
+  const [subscriptions, setSubscriptions] = useState<SubscriptionItem[]>(() =>
+    loadStoredData<SubscriptionItem[]>('finora_subscriptions', initialSubs)
+  );
+  const [assetsLiabilities, setAssetsLiabilities] = useState<AssetLiability[]>(() =>
+    loadStoredData<AssetLiability[]>('finora_assets_liabilities', initialAssetsLiabilities)
+  );
+
   const [profile, setProfile] = useState<UserProfile>(() =>
-    loadLocal<UserProfile>('finora_profile', {
-      name: 'Pengguna',
+    loadStoredData<UserProfile>('finora_profile', {
+      name: 'Alex',
       email: 'pribadi@finora.id',
-      avatarColor: '#FF6584',
+      avatarColor: '#2D6A4F',
       plan: 'Personal',
       joinedDate: '2026',
     })
   );
   const [notifications, setNotifications] = useState<NotificationItem[]>(() =>
-    loadLocal<NotificationItem[]>('finora_notifications', [])
+    loadStoredData<NotificationItem[]>('finora_notifications', [])
   );
 
-  // Non-blocking background sync to local storage
+  // Check first launch for Onboarding
   useEffect(() => {
-    saveLocalAsync('finora_transactions', transactions);
-  }, [transactions]);
+    const hasSeenOnboarding = localStorage.getItem('finora_onboarding_seen');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+      localStorage.setItem('finora_onboarding_seen', 'true');
+    }
+  }, []);
 
-  useEffect(() => {
-    saveLocalAsync('finora_accounts', accounts);
-  }, [accounts]);
-
-  useEffect(() => {
-    saveLocalAsync('finora_budgets', budgets);
-  }, [budgets]);
-
-  useEffect(() => {
-    saveLocalAsync('finora_goals', goals);
-  }, [goals]);
-
-  useEffect(() => {
-    saveLocalAsync('finora_profile', profile);
-  }, [profile]);
-
-  useEffect(() => {
-    saveLocalAsync('finora_notifications', notifications);
-  }, [notifications]);
+  // Asynchronous Storage Persistence
+  useEffect(() => { saveStoredData('finora_transactions', transactions); }, [transactions]);
+  useEffect(() => { saveStoredData('finora_accounts', accounts); }, [accounts]);
+  useEffect(() => { saveStoredData('finora_budgets', budgets); }, [budgets]);
+  useEffect(() => { saveStoredData('finora_goals', goals); }, [goals]);
+  useEffect(() => { saveStoredData('finora_recurring', recurring); }, [recurring]);
+  useEffect(() => { saveStoredData('finora_subscriptions', subscriptions); }, [subscriptions]);
+  useEffect(() => { saveStoredData('finora_profile', profile); }, [profile]);
+  useEffect(() => { saveStoredData('finora_notifications', notifications); }, [notifications]);
 
   // Modal visibility states
   const [showAddTransaction, setShowAddTransaction] = useState(false);
@@ -138,7 +131,7 @@ export default function App() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
-  // Single Active Toast Notification System
+  // Single Active Toast System
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const addToast = useCallback((type: ToastMessage['type'], title: string, message: string) => {
@@ -155,50 +148,62 @@ export default function App() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // 1. Transaction Handlers
-  const handleAddTransaction = (newTx: Transaction) => {
+  // 1. Transaction Handlers (Supports Income, Expense, and Transfer)
+  const handleAddTransaction = (newTxData: Omit<Transaction, 'id'>) => {
+    const newTx: Transaction = {
+      ...newTxData,
+      id: `tx-${Date.now()}`,
+    };
+
     setTransactions(prev => [newTx, ...prev]);
 
-    setAccounts(prev => {
-      const targetAcc = prev.find(a => a.id === newTx.accountId);
-      if (!targetAcc) {
-        return [
-          ...prev,
-          {
-            id: newTx.accountId,
-            name: newTx.accountId === 'bca' ? 'BCA' : newTx.accountId.toUpperCase(),
-            type: 'bank',
-            balance: newTx.type === 'income' ? newTx.amount : 0,
-            color: '#368F7B',
-            icon: 'wallet',
-          },
-        ];
-      }
-      return prev.map(acc => {
-        if (acc.id === newTx.accountId) {
-          const delta = newTx.type === 'income' ? newTx.amount : -newTx.amount;
-          return { ...acc, balance: Math.max(0, acc.balance + delta) };
-        }
-        return acc;
-      });
-    });
-
-    if (newTx.type === 'expense') {
-      setBudgets(prev =>
-        prev.map(b => {
-          if (b.categoryId === newTx.categoryId) {
-            return { ...b, spent: b.spent + newTx.amount };
+    if (newTx.type === 'transfer' && newTx.fromAccountId && newTx.toAccountId) {
+      // Transfer logic: Account A -> Account B
+      setAccounts(prev =>
+        prev.map(acc => {
+          if (acc.id === newTx.fromAccountId) {
+            return { ...acc, balance: Math.max(0, acc.balance - newTx.amount) };
           }
-          return b;
+          if (acc.id === newTx.toAccountId) {
+            return { ...acc, balance: acc.balance + newTx.amount };
+          }
+          return acc;
         })
       );
-    }
+      addToast(
+        'success',
+        'Transfer Berhasil',
+        `Memindahkan ${formatRupiah(newTx.amount)} antar rekening.`
+      );
+    } else {
+      // Income or Expense logic
+      setAccounts(prev =>
+        prev.map(acc => {
+          if (acc.id === newTx.accountId) {
+            const delta = newTx.type === 'income' ? newTx.amount : -newTx.amount;
+            return { ...acc, balance: Math.max(0, acc.balance + delta) };
+          }
+          return acc;
+        })
+      );
 
-    addToast(
-      'success',
-      'Transaksi Berhasil Disimpan',
-      `${newTx.type === 'income' ? 'Pemasukan' : 'Pengeluaran'} ${formatRupiah(newTx.amount)} telah dicatat.`
-    );
+      if (newTx.type === 'expense') {
+        setBudgets(prev =>
+          prev.map(b => {
+            if (b.categoryId === newTx.categoryId) {
+              return { ...b, spent: b.spent + newTx.amount };
+            }
+            return b;
+          })
+        );
+      }
+
+      addToast(
+        'success',
+        'Transaksi Disimpan',
+        `${newTx.type === 'income' ? 'Pemasukan' : 'Pengeluaran'} ${formatRupiah(newTx.amount)} dicatat.`
+      );
+    }
   };
 
   const handleDeleteTransaction = (id: string) => {
@@ -206,16 +211,6 @@ export default function App() {
     if (!target) return;
 
     setTransactions(prev => prev.filter(t => t.id !== id));
-
-    setAccounts(prev =>
-      prev.map(acc => {
-        if (acc.id === target.accountId) {
-          const delta = target.type === 'income' ? -target.amount : target.amount;
-          return { ...acc, balance: Math.max(0, acc.balance + delta) };
-        }
-        return acc;
-      })
-    );
 
     if (target.type === 'expense') {
       setBudgets(prev =>
@@ -234,7 +229,7 @@ export default function App() {
   // 2. Account & Transfer Handlers
   const handleAddAccount = (newAccount: Account) => {
     setAccounts(prev => [...prev, newAccount]);
-    addToast('success', 'Akun Baru Ditambahkan', `Rekening "${newAccount.name}" siap digunakan.`);
+    addToast('success', 'Akun Ditambahkan', `Rekening "${newAccount.name}" siap digunakan.`);
   };
 
   const handleTransferFunds = (fromId: string, toId: string, amount: number, notes?: string) => {
@@ -246,31 +241,17 @@ export default function App() {
       return;
     }
 
-    setAccounts(prev =>
-      prev.map(acc => {
-        if (acc.id === fromId) return { ...acc, balance: acc.balance - amount };
-        if (acc.id === toId) return { ...acc, balance: acc.balance + amount };
-        return acc;
-      })
-    );
-
-    const today = new Date().toISOString().slice(0, 10);
-    const transferTx: Transaction = {
-      id: `tx-transfer-${Date.now()}`,
-      date: today,
+    handleAddTransaction({
+      type: 'transfer',
       amount,
-      type: 'expense',
       categoryId: 'bills',
       accountId: fromId,
-      description: notes || `Transfer ke ${toAcc.name}`,
-    };
-    setTransactions(prev => [transferTx, ...prev]);
-
-    addToast(
-      'success',
-      'Transfer Berhasil',
-      `Berhasil memindahkan ${formatRupiah(amount)} dari ${fromAcc.name} ke ${toAcc.name}.`
-    );
+      fromAccountId: fromId,
+      toAccountId: toId,
+      merchant: 'Transfer Antar Rekening',
+      description: notes || `Transfer dari ${fromAcc.name} ke ${toAcc.name}`,
+      date: new Date().toISOString().slice(0, 10),
+    });
   };
 
   // 3. Budget Handlers
@@ -288,7 +269,7 @@ export default function App() {
   // 4. Goal Handlers
   const handleAddGoal = (newGoal: Goal) => {
     setGoals(prev => [...prev, newGoal]);
-    addToast('success', 'Tujuan Tabungan Dibuat', `Target "${newGoal.name}" telah aktif.`);
+    addToast('success', 'Target Impian Dibuat', `Target "${newGoal.name}" telah aktif.`);
   };
 
   const handleUpdateGoalAmount = (id: string, delta: number) => {
@@ -303,16 +284,14 @@ export default function App() {
     );
 
     if (delta > 0) {
-      addToast('success', 'Tabungan Bertambah', `Berhasil menabung ${formatRupiah(delta)} ke tujuan.`);
-    } else {
-      addToast('info', 'Penarikan Dana', `Berhasil menarik ${formatRupiah(Math.abs(delta))} dari tujuan.`);
+      addToast('success', 'Tabungan Bertambah', `Berhasil menabung ${formatRupiah(delta)} ke target.`);
     }
   };
 
-  // 5. Profile & Data Handlers
+  // 5. Profile & Data Management
   const handleUpdateProfile = (updated: UserProfile) => {
     setProfile(updated);
-    addToast('success', 'Profil Diperbarui', 'Nama panggilan berhasil diperbarui.');
+    addToast('success', 'Profil Diperbarui', 'Informasi profil berhasil diperbarui.');
   };
 
   const handleResetAllData = () => {
@@ -321,36 +300,18 @@ export default function App() {
     setBudgets([]);
     setGoals([]);
     setNotifications([]);
-    localStorage.removeItem('finora_transactions');
-    localStorage.removeItem('finora_accounts');
-    localStorage.removeItem('finora_budgets');
-    localStorage.removeItem('finora_goals');
-    localStorage.removeItem('finora_notifications');
-    addToast('info', 'Data Dibersihkan', 'Seluruh catatan telah dihapus dari perangkat.');
+    localStorage.clear();
+    addToast('info', 'Data Bersih', 'Seluruh catatan lokal telah dibersihkan.');
   };
 
-  const handleRestoreData = (backup: {
-    transactions: Transaction[];
-    accounts: Account[];
-    budgets: BudgetType[];
-    goals: Goal[];
-  }) => {
-    setTransactions(backup.transactions);
-    setAccounts(backup.accounts);
-    setBudgets(backup.budgets);
-    setGoals(backup.goals);
-    addToast('success', 'Data Dipulihkan', 'Seluruh catatan dari file cadangan berhasil dimuat.');
-  };
-
-  // 6. Notification Handlers
-  const handleMarkAllNotificationsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    addToast('info', 'Notifikasi Dibaca', 'Seluruh notifikasi telah ditandai sebagai dibaca.');
-  };
-
-  const handleClearNotifications = () => {
-    setNotifications([]);
-    addToast('info', 'Notifikasi Dibersihkan', 'Semua notifikasi telah dihapus.');
+  const handleRestoreData = (backup: any) => {
+    if (backup.transactions) setTransactions(backup.transactions);
+    if (backup.accounts) setAccounts(backup.accounts);
+    if (backup.budgets) setBudgets(backup.budgets);
+    if (backup.goals) setGoals(backup.goals);
+    if (backup.recurring) setRecurring(backup.recurring);
+    if (backup.subscriptions) setSubscriptions(backup.subscriptions);
+    addToast('success', 'Data Dipulihkan', 'Seluruh data dari cadangan berhasil dimuat.');
   };
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
@@ -363,6 +324,8 @@ export default function App() {
             transactions={transactions}
             accounts={accounts}
             budgets={budgets}
+            goals={goals}
+            recurring={recurring}
             userName={profile.name}
             unreadNotificationsCount={unreadNotificationsCount}
             onOpenNotifications={() => setShowNotifications(true)}
@@ -390,8 +353,6 @@ export default function App() {
             onOpenTransfer={() => setShowTransfer(true)}
           />
         );
-      case 'analytics':
-        return <Analytics transactions={transactions} />;
       case 'budget':
         return (
           <Budget
@@ -408,6 +369,23 @@ export default function App() {
             onUpdateGoal={handleUpdateGoalAmount}
           />
         );
+      case 'recurring':
+        return (
+          <Recurring
+            recurring={recurring}
+            subscriptions={subscriptions}
+          />
+        );
+      case 'calendar':
+        return (
+          <MoneyCalendar
+            transactions={transactions}
+            recurring={recurring}
+            onSelectTransaction={tx => setSelectedTransaction(tx)}
+          />
+        );
+      case 'analytics':
+        return <Analytics transactions={transactions} />;
       case 'profile':
         return (
           <Profile
@@ -430,6 +408,8 @@ export default function App() {
             transactions={transactions}
             accounts={accounts}
             budgets={budgets}
+            goals={goals}
+            recurring={recurring}
             userName={profile.name}
             unreadNotificationsCount={unreadNotificationsCount}
             onOpenNotifications={() => setShowNotifications(true)}
@@ -443,16 +423,23 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-full bg-[#F8F3ED]/70 backdrop-blur-[2px] overflow-hidden">
-      {/* Animated Apple Splash Screen on Startup */}
-      {showSplash && (
-        <SplashScreen onFinish={() => setShowSplash(false)} />
+    <div className="flex h-full bg-[#F8F3ED] overflow-hidden">
+      {/* Refined Editorial Splash Screen */}
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+
+      {/* Optional Non-Intrusive Onboarding Flow */}
+      {showOnboarding && (
+        <OnboardingModal
+          onClose={() => setShowOnboarding(false)}
+          onAddAccount={handleAddAccount}
+          onAddGoal={handleAddGoal}
+        />
       )}
 
-      {/* Toast Notification Container */}
+      {/* Toast System */}
       <Toast toasts={toasts} onDismiss={removeToast} />
 
-      {/* Desktop sidebar */}
+      {/* Desktop Editorial Sidebar */}
       <div className="hidden lg:block">
         <Sidebar
           currentPage={page}
@@ -463,19 +450,31 @@ export default function App() {
         />
       </div>
 
-      {/* Main content */}
+      {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <PageTransition key={page} className="flex-1 flex flex-col min-h-0">
           {renderPage()}
         </PageTransition>
       </main>
 
-      {/* Mobile bottom nav */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40">
-        <BottomNav currentPage={page} onNavigate={setPage} onAdd={() => setShowAddTransaction(true)} />
-      </div>
+      {/* Mobile Bottom Navigation & Drawer */}
+      <BottomNav
+        currentPage={page}
+        onNavigate={setPage}
+        onAdd={() => setShowAddTransaction(true)}
+        onOpenMore={() => setShowMobileMore(true)}
+      />
 
-      {/* ── Modals ── */}
+      <MobileMoreDrawer
+        isOpen={showMobileMore}
+        onClose={() => setShowMobileMore(false)}
+        onNavigate={setPage}
+        onOpenSecurity={() => setShowSecurityModal(true)}
+        onOpenExport={() => setShowExportModal(true)}
+        onOpenHelp={() => setShowHelpModal(true)}
+      />
+
+      {/* Modals */}
       {showAddTransaction && (
         <AddTransaction
           accounts={accounts}
@@ -527,8 +526,8 @@ export default function App() {
         <NotificationModal
           notifications={notifications}
           onClose={() => setShowNotifications(false)}
-          onMarkAllRead={handleMarkAllNotificationsRead}
-          onClear={handleClearNotifications}
+          onMarkAllRead={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+          onClear={() => setNotifications([])}
         />
       )}
 

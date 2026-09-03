@@ -1,193 +1,147 @@
-import { useMemo } from 'react';
-import { Plus, PiggyBank, AlertTriangle } from 'lucide-react';
-import { getCategory, formatRupiah, formatRupiahFull } from '../data/mockData';
+import { Plus, AlertTriangle, CheckCircle, Sparkles } from 'lucide-react';
+import { categories, formatRupiah } from '../data/mockData';
 import IconMapper from '../components/ui/IconMapper';
-import AnimatedNumber from '../components/ui/AnimatedNumber';
-import type { Budget as BudgetType, Transaction } from '../types';
+import WeekHeaderStrip from '../components/ui/WeekHeaderStrip';
+import { useWeekStrip } from '../hooks/useWeekStrip';
+import type { Transaction, Budget as BudgetType } from '../types';
 
 interface BudgetProps {
-  budgets: BudgetType[];
   transactions: Transaction[];
+  budgets: BudgetType[];
   onAddBudget: () => void;
 }
 
-export default function Budget({ budgets, transactions: txs, onAddBudget }: BudgetProps) {
-  const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+export default function Budget({ transactions: txs, budgets, onAddBudget }: BudgetProps) {
+  const { weekDays, isCurrentWeek, selectDay, goBack, goForward } = useWeekStrip();
+  const now = new Date();
+  const currentDay = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const remainingDays = Math.max(1, daysInMonth - currentDay);
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  const budgetsWithLiveSpent = useMemo(() => {
-    return budgets.map(b => {
-      const liveSpent = txs
-        .filter(t => t.type === 'expense' && t.categoryId === b.categoryId && t.date.startsWith(currentMonthPrefix))
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      return {
-        ...b,
-        spent: liveSpent > 0 ? liveSpent : b.spent,
-      };
-    });
-  }, [budgets, txs, currentMonthPrefix]);
-
-  const totalLimit = budgetsWithLiveSpent.reduce((s, b) => s + b.limit, 0);
-  const totalSpent = budgetsWithLiveSpent.reduce((s, b) => s + b.spent, 0);
-  const totalPct = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
-
-  const currentMonthLabel = new Date().toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+  const totalBudgetLimit = budgets.reduce((s, b) => s + b.limit, 0);
+  const totalBudgetSpent = budgets.reduce((s, b) => {
+    const actual = txs
+      .filter(t => t.date.startsWith(currentMonthStr) && t.categoryId === b.categoryId && t.type === 'expense')
+      .reduce((s2, t) => s2 + t.amount, 0);
+    return s + (actual > 0 ? actual : b.spent);
+  }, 0);
+  const totalPct = totalBudgetLimit > 0 ? Math.min(100, Math.round((totalBudgetSpent / totalBudgetLimit) * 100)) : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Seamless Floating Header */}
-      <div className="sticky top-0 z-30 bg-[#FAF5EF]/80 backdrop-blur-xl px-3.5 sm:px-6 lg:px-10 py-2.5 border-b border-charcoal/5 transition-all">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-base sm:text-lg font-black text-charcoal tracking-tight">Batas Anggaran</h1>
-              <span className="text-[9px] font-black text-[#FF9F43] bg-[#FF9F43]/15 px-2 py-0.5 rounded-full border border-[#FF9F43]/20">
-                {currentMonthLabel}
-              </span>
-            </div>
-          </div>
+    <div className="flex-1 overflow-y-auto bg-[#F8F3ED]">
+      <WeekHeaderStrip
+        title="ANGGARAN BULANAN"
+        gradientFromTo="from-[#FFB260] to-[#FF9F43]"
+        rightElement={
           <button
             onClick={onAddBudget}
-            className="flex items-center gap-1 bg-[#FF9F43] hover:bg-[#FF8E71] text-white px-3 py-1.5 rounded-full shadow-xs font-black text-[11px] transition-all cursor-pointer active:scale-95"
+            className="w-9 h-9 rounded-full bg-white/25 flex items-center justify-center border-2 border-white/30 cursor-pointer active:scale-90 transition-all shadow-xs"
+            title="Tambah Anggaran"
           >
-            <Plus size={13} strokeWidth={3} />
-            <span>Atur</span>
+            <Plus size={16} strokeWidth={2.5} />
           </button>
-        </div>
-      </div>
+        }
+        weekDays={weekDays}
+        isCurrentWeek={isCurrentWeek}
+        goBack={goBack}
+        goForward={goForward}
+        selectDay={selectDay}
+      />
 
-      <div className="px-3.5 sm:px-6 lg:px-10 py-3.5 space-y-3.5 pb-20 lg:pb-10 max-w-7xl mx-auto w-full">
-        {/* Total Budget Card Hero */}
-        <div className="rounded-[1.3rem] sm:rounded-[1.6rem] bg-gradient-to-br from-[#FF9F43] to-[#FFA94D] p-3.5 sm:p-5 relative overflow-hidden shadow-md shadow-[#FF9F43]/20 text-white">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/15 rounded-full blur-lg pointer-events-none" />
+      <main className="bg-white rounded-t-[2rem] -mt-8 pt-5 px-4 pb-40 space-y-4 shadow-[0_-4px_32px_rgba(0,0,0,0.08)] relative z-20">
 
-          <div className="flex items-center justify-between relative mb-1">
-            <span className="text-white/75 text-[9px] font-extrabold uppercase tracking-wider">
-              Total Pengeluaran Bulan Ini
-            </span>
-            <span className="text-[10px] font-bold text-white bg-black/15 px-2 py-0.5 rounded-full">
-              {totalPct}% dari batas
+        {/* Hero Overview */}
+        <div className="bg-[#FFF5ED] rounded-2xl p-4 border-2 border-[#FFA94D]/15 interactive-card animate-slide-up">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={13} className="text-[#FFA94D] animate-pulse" />
+              <span className="text-[10px] font-black text-[#1C1B18]/50 uppercase tracking-wider">OVERVIEW ANGGARAN BULANAN</span>
+            </div>
+            <span className={`text-[10px] font-black px-3 py-0.5 rounded-full bg-white border-2 ${totalPct >= 100 ? 'border-[#FF6584]/30 text-[#FF6584]' : totalPct >= 75 ? 'border-[#FFA94D]/30 text-[#FFA94D]' : 'border-[#368F7B]/30 text-[#368F7B]'}`}>
+              {totalPct >= 100 ? 'HABIS' : totalPct >= 75 ? 'RISIKO' : 'AMAN'}
             </span>
           </div>
-
-          <div className="text-xl sm:text-2xl font-black tracking-tight leading-none my-2 relative">
-            <AnimatedNumber value={totalSpent} formatter={formatRupiahFull} />
+          <div className="flex items-end justify-between mb-3">
+            <h2 className="text-3xl font-black text-[#1C1B18] tracking-tight leading-none">{totalPct}%</h2>
+            <span className="text-xs font-black text-[#1C1B18]/50 mb-1">{formatRupiah(totalBudgetSpent)} / {formatRupiah(totalBudgetLimit)}</span>
           </div>
-          <p className="text-white/80 text-[11px] font-bold mb-2.5 relative">
-            dari total alokasi batas {formatRupiahFull(totalLimit)}
-          </p>
-
-          <div className="h-2 bg-black/15 rounded-full overflow-hidden p-0.5 relative">
+          <div className="w-full h-3.5 bg-white rounded-full overflow-hidden border-2 border-[#1C1B18]/8">
             <div
-              className={`h-full rounded-full transition-all duration-700 ease-out ${
-                totalPct >= 100 ? 'bg-[#FF6584]' : 'bg-white'
-              }`}
-              style={{ width: `${Math.min(totalPct, 100)}%` }}
+              className={`h-full rounded-full transition-all duration-700 ease-out ${totalPct >= 100 ? 'bg-[#FF6584]' : totalPct >= 75 ? 'bg-gradient-to-r from-[#FFA94D] to-[#FF6584]' : 'bg-gradient-to-r from-[#FFB260] to-[#FFA94D]'}`}
+              style={{ width: `${Math.min(100, totalPct)}%` }}
             />
           </div>
         </div>
 
-        {/* Categories Budget Grid (3 cols on Desktop) */}
-        <div>
-          <h2 className="text-xs sm:text-sm font-black text-charcoal mb-2">Batas Per Kategori</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5">
-            {budgetsWithLiveSpent.map(b => {
-              const cat = getCategory(b.categoryId);
-              const pct = b.limit > 0 ? Math.round((b.spent / b.limit) * 100) : 0;
-              const isOver = b.spent > b.limit;
-              const remaining = b.limit - b.spent;
+        {/* Budget Category Cards */}
+        <div className="space-y-3">
+          {budgets.map(b => {
+            const category = categories.find(c => c.id === b.categoryId) || categories[0];
+            const actualSpent = txs
+              .filter(t => t.date.startsWith(currentMonthStr) && t.categoryId === b.categoryId && t.type === 'expense')
+              .reduce((s, t) => s + t.amount, 0);
+            const spent = actualSpent > 0 ? actualSpent : b.spent;
+            const pct = Math.min(100, Math.round((spent / b.limit) * 100));
+            const dailyRate = Math.round(spent / Math.max(1, currentDay));
+            const projectedTotal = spent + dailyRate * remainingDays;
+            const isOver = projectedTotal > b.limit;
+            const isExceeded = spent >= b.limit;
 
-              return (
-                <div
-                  key={b.categoryId}
-                  className="bg-white rounded-[1.3rem] p-3.5 border border-charcoal/5 shadow-xs flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs"
-                          style={{ backgroundColor: cat?.color || '#FF6584' }}
-                        >
-                          <IconMapper name={cat?.icon || ''} size={15} color="#ffffff" />
-                        </div>
-                        <div>
-                          <h3 className="text-xs sm:text-sm font-black text-charcoal">{cat?.name}</h3>
-                          <span className="text-[9px] font-bold text-charcoal/40">Batas Bulanan</span>
-                        </div>
-                      </div>
-                      <span
-                        className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                          isOver ? 'bg-[#FF6584]/15 text-[#FF6584]' : 'bg-[#368F7B]/15 text-[#368F7B]'
-                        }`}
-                      >
-                        {pct}%
-                      </span>
+            const statusBg = isExceeded ? 'bg-[#FFF0F3] border-[#FF6584]/20' : isOver ? 'bg-[#FFF5ED] border-[#FFA94D]/20' : 'bg-[#EFFAF6] border-[#368F7B]/20';
+            const barColor = isExceeded ? '#FF6584' : isOver ? '#FFA94D' : '#368F7B';
+            const statusLabel = isExceeded ? 'Habis' : isOver ? 'Risiko' : 'Aman';
+            const statusTextColor = isExceeded ? 'text-[#FF6584]' : isOver ? 'text-[#FFA94D]' : 'text-[#368F7B]';
+
+            return (
+              <div key={b.categoryId} className={`rounded-2xl p-4 border-2 ${statusBg} interactive-card`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white border border-black/5 shadow-xs" style={{ backgroundColor: category.color }}>
+                      <IconMapper name={category.icon} size={16} />
                     </div>
-
-                    <div className="my-2">
-                      <div className="flex justify-between text-xs font-black mb-1">
-                        <span className={isOver ? 'text-[#FF6584]' : 'text-charcoal'}>
-                          {formatRupiah(b.spent)}
-                        </span>
-                        <span className="text-charcoal/40 font-bold">{formatRupiah(b.limit)}</span>
-                      </div>
-                      <div className="h-1.5 bg-[#F8F3ED] rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            isOver ? 'bg-[#FF6584]' : 'bg-[#368F7B]'
-                          }`}
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
-                      </div>
+                    <div>
+                      <h3 className="text-xs font-black text-[#1C1B18]">{category.name}</h3>
+                      <p className="text-[9px] text-[#1C1B18]/40 font-bold">{pct}% terpakai</p>
                     </div>
                   </div>
-
-                  <div className="pt-2 border-t border-charcoal/5 flex items-center justify-between text-[10px]">
-                    <span className="text-charcoal/40 font-bold">
-                      {isOver ? 'Melebihi batas' : 'Sisa kuota'}
-                    </span>
-                    <span
-                      className={`font-black ${
-                        isOver ? 'text-[#FF6584]' : 'text-[#368F7B]'
-                      }`}
-                    >
-                      {formatRupiah(Math.abs(remaining))}
-                    </span>
+                  <div className={`flex items-center gap-1 text-[10px] font-black ${statusTextColor}`}>
+                    {isExceeded ? <AlertTriangle size={12} /> : isOver ? <AlertTriangle size={12} /> : <CheckCircle size={12} />}
+                    {statusLabel}
                   </div>
                 </div>
-              );
-            })}
 
-            {/* Add Budget Card Button */}
-            <button
-              onClick={onAddBudget}
-              className="border-2 border-dashed border-charcoal/15 bg-white/70 rounded-[1.3rem] p-4 flex flex-col items-center justify-center gap-1.5 hover:border-[#FF9F43] hover:bg-[#FF9F43]/5 transition-all cursor-pointer min-h-[110px]"
-            >
-              <div className="w-7 h-7 bg-[#F8F3ED] rounded-full flex items-center justify-center">
-                <Plus size={14} className="text-charcoal/40" />
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-black text-[#1C1B18]">{formatRupiah(spent)}</span>
+                    <span className="text-xs font-bold text-[#1C1B18]/40">/ {formatRupiah(b.limit)}</span>
+                  </div>
+                  <div className="w-full h-3 bg-white rounded-full overflow-hidden border border-[#1C1B18]/8">
+                    <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-[#1C1B18]/8">
+                  <div>
+                    <p className="text-[9px] text-[#1C1B18]/40 font-bold">Laju Harian</p>
+                    <p className="text-xs font-black text-[#1C1B18]">{formatRupiah(dailyRate)}/hari</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-[#1C1B18]/40 font-bold">Proyeksi Akhir Bulan</p>
+                    <p className={`text-xs font-black ${isOver ? 'text-[#FF6584]' : 'text-[#368F7B]'}`}>{formatRupiah(projectedTotal)}</p>
+                  </div>
+                </div>
               </div>
-              <span className="text-[11px] font-black text-charcoal/60">Tambah Batas Anggaran</span>
-            </button>
-          </div>
-        </div>
+            );
+          })}
 
-        {budgets.length === 0 && (
-          <div className="bg-white rounded-[1.3rem] p-8 text-center border border-charcoal/5 shadow-xs">
-            <PiggyBank size={24} className="text-charcoal/30 mx-auto mb-1.5" />
-            <h3 className="text-xs font-black text-charcoal">Belum Ada Anggaran Kategori</h3>
-            <p className="text-[10px] text-charcoal/40 mt-0.5 mb-3">
-              Tentukan batas pengeluaran bulananmu agar finansial terkontrol.
-            </p>
-            <button
-              onClick={onAddBudget}
-              className="px-4 py-2 bg-[#FF9F43] text-white rounded-full font-black text-[11px] shadow-xs active:scale-95 cursor-pointer"
-            >
-              + Atur Anggaran Pertama
-            </button>
-          </div>
-        )}
-      </div>
+          {budgets.length === 0 && (
+            <div className="py-12 text-center">
+              <p className="text-xs font-black text-[#1C1B18]/30">Belum ada anggaran. Tap (+) untuk menambahkan!</p>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
